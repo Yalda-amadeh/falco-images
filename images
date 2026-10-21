@@ -1,0 +1,50 @@
+
+name: Download Falco Images
+
+on:
+  workflow_dispatch:
+
+jobs:
+  download-images:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pull Falco Images
+        run: |
+          docker pull --platform linux/amd64 \
+            docker.io/falcosecurity/falco:0.45.1
+
+          docker pull --platform linux/amd64 \
+            docker.io/falcosecurity/falco-driver-loader:0.45.1
+
+          docker pull --platform linux/amd64 \
+            docker.io/falcosecurity/falcoctl:0.14.2
+
+      - name: Export Image Archives
+        run: |
+          mkdir -p images
+
+          docker save \
+            -o images/falco-0.45.1.tar \
+            docker.io/falcosecurity/falco:0.45.1
+
+          docker save \
+            -o images/falco-driver-loader-0.45.1.tar \
+            docker.io/falcosecurity/falco-driver-loader:0.45.1
+
+          docker save \
+            -o images/falcoctl-0.14.2.tar \
+            docker.io/falcosecurity/falcoctl:0.14.2
+
+          gzip -1 images/*.tar
+
+          cd images
+          sha256sum *.tar.gz > SHA256SUMS
+
+      - name: Upload Image Archives
+        uses: actions/upload-artifact@v4
+        with:
+          name: falco-offline-images
+          path: images/
+          retention-days: 7
+          compression-level: 0
