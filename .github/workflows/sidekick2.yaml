@@ -1,0 +1,35 @@
+
+name: Download Falcosidekick
+
+on:
+  workflow_dispatch:
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pull Falcosidekick
+        run: |
+          docker pull --platform linux/amd64 \
+            docker.io/falcosecurity/falcosidekick:2.32.0
+
+      - name: Export Image
+        run: |
+          mkdir -p images
+
+          docker save \
+            -o images/falcosidekick-2.32.0.tar \
+            docker.io/falcosecurity/falcosidekick:2.32.0
+
+          gzip -1 images/falcosidekick-2.32.0.tar
+
+          cd images
+          sha256sum *.tar.gz > SHA256SUMS
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: falcosidekick-2.32.0-offline
+          path: images/
+          retention-days: 7
