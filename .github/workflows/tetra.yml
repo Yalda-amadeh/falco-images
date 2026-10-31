@@ -1,0 +1,60 @@
+
+name: Download Vector Offline Bundle
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  download-vector:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Install Helm
+        uses: azure/setup-helm@v4.3.0
+        with:
+          version: v3.17.3
+
+      - name: Create output directory
+        run: mkdir -p output
+
+      # Download official Vector Helm Chart
+      - name: Download Vector Helm Chart
+        run: |
+          helm pull \
+            oci://ghcr.io/vectordotdev/helm-charts/vector \
+            --version 0.39.0 \
+            --destination output/
+
+          helm show chart output/vector-0.39.0.tgz \
+            > output/chart-info.txt
+
+      # Download Vector Docker Image
+      - name: Download Vector Image
+        run: |
+          docker pull --platform linux/amd64 \
+            timberio/vector:0.43.1-distroless-libc
+
+          docker save \
+            -o output/vector-0.43.1-distroless-libc-amd64.tar \
+            timberio/vector:0.43.1-distroless-libc
+
+      # Generate checksums
+      - name: Generate SHA256 Checksums
+        run: |
+          cd output
+          sha256sum \
+            vector-0.39.0.tgz \
+            vector-0.43.1-distroless-libc-amd64.tar \
+            > SHA256SUMS.txt
+
+      # Upload artifacts for downloading
+      - name: Upload Offline Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-offline-bundle
+          path: output/
+          retention-days: 7
+          if-no-files-found: error
